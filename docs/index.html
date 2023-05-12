@@ -3,16 +3,24 @@
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-      html, body {
+      html {
         margin: 0;
         height: 100%;
       }
 
-      main {
+      body{
+        margin: 0;
+        padding: 0 1em;
         height: 100%;
+        overflow: auto;
+      }
+
+      main {
+        min-height: 100%;
         max-width: 800px;
         margin: 0 auto;
-        overflow: auto;
+        padding: 0 0 100px;
+        box-sizing: border-box;
       }
 
       .api-key{
@@ -71,8 +79,8 @@
 
       #input {
         outline: none;
-        position: absolute;
-        max-width: 600px;
+        position: fixed;
+        max-width: 800px;
         width: 100%;
         bottom: 0;
         box-shadow: 0 0 5px #aaa;
@@ -81,6 +89,7 @@
         border-radius: 3em;
         font-size: 1.2em;
         box-sizing: border-box;
+        background: #fff;
       }
       #input:hover, #input:focus, #input:active {
         border: solid 1px #888;
@@ -166,16 +175,17 @@
       </section>
 
       <section class="prompt">
-        <p class="label">{{ prompts[0].label }}</p>
-        <div class="options">
+        <p class="label" v-show="prompts[0].label">{{ prompts[0].label }}</p>
+        <div class="options" v-show="prompts[0].options">
           <button v-for="option in prompts[0].options"
                   class="option"
                   @click="choose(option)">
             {{ option }}
           </button>
         </div>
-        <div v-show="prompts[0].error" class="error">{{ prompts[0].error }}</div>
+        <div v-show="prompts[0].error" class="error">Oops. Something went wrong. {{ prompts[0].error }}</div>
         <div v-show="prompts[0].waiting" class="loader">Loading...</div>
+        <button @click="nextPrompt()" v-show="prompts[0].error">Try again</button>
         <button @click="cancel(prompts[0].label)" v-show="prompts[0].input">Go Back</button>
         <button @click="skip()" v-show="prompts[0].options">Skip these questions</button>
         <button @click="reset()" v-show="prompts[0].export">Reset Interview</button>
@@ -192,6 +202,7 @@
     <script type="module">
       import { createApp, reactive } from 'https://unpkg.com/petite-vue?module'
       const clone = o => JSON.parse(JSON.stringify(o))
+      const scrollToBottom = () => window.scrollTo(0, document.body.scrollHeight)
       const apiKeyInput = document.querySelector('.api-key input')
 
       const questionJsonSchema = `{"$schema":"https://json-schema.org/draft/2019-09/schema","type":"object","properties":{"questions":{"type":"array","items":{"type":"string"},"minItems":1,"maxItems":1,"uniqueItems":true}}}`
@@ -217,15 +228,11 @@
         } catch (e) {
           try {
             const json = raw.split('\n').reduce((acc, line) => {
-              if (acc.state === 'none' && line.startsWith('```')) {
-                acc.state = 'consume'
-              } else if (acc.state === 'consume' && line.startsWith('```')) {
-                acc.state = 'stop'
-              } else if (acc.state === 'consume') {
-                acc.content += `${line}\n`
-              }
+              if (!acc.consume && !line.startsWith('```')) return acc
+              if (acc.consume && !line.startsWith('```')) acc.content += `${line}\n`
+              if (line.startsWith('```')) acc.consume = !acc.consume
               return acc
-            }, { state: 'none', content: '' })
+            }, { consume: false, content: '' })
             return JSON.parse(json.content)
           } catch (e) {
             throw e
@@ -252,8 +259,8 @@
         label: 'Please choose from among the following prompts to get started:',
         options: [
           'What are the names of your parents, grandparents, and great-grandparents?',
-          'Where were they born and raised?',
-          'What were their occupations?',
+          'Where were your parents born and raised?',
+          'What were your parents occupations?',
           'Do you have any family stories or traditions that you would like to share?'
         ]
       },{
@@ -270,7 +277,6 @@
           content: `Yes, I'm ready!`
         }],
         prompts: clone(initialPrompts),
-
         copyToClipboard(text) {
           const el = document.createElement('textarea')
           el.value = text
@@ -290,14 +296,23 @@
           })
           const raw = response?.choices?.[0]?.message?.content ?? ''
           try {
-            data = parseJson(raw)
-            const question = data.questions[0]
+            prompt = parseJson(raw)?.questions?.[0] ?? `I can't seem to think of any more questions. How embarrassing!`
             this.prompts.shift()
-            this.prompts.unshift({ label: question, input: true })
+            this.prompts.unshift({ label: prompt, input: true })
+            setTimeout(() => {
+              this.$refs.input.focus()
+              scrollToBottom()
+            }, 0)
+
           } catch (e) {
             console.log(`Failed to parse JSON from |${raw}|`)
             console.error(e)
-            this.prompts.push({ error: e.message })
+            this.prompts.shift()
+            this.prompts.unshift({ error: e.message })
+            setTimeout(() => {
+              this.$refs.input.focus()
+              scrollToBottom()
+            }, 0)
           }
         },
         answerPrompt(e) {
@@ -314,6 +329,7 @@
             content: answer
           })
           this.prompts.unshift({ waiting: true })
+          setTimeout(() => scrollToBottom(), 0)
           this.nextPrompt()
         },
         choose(option) {
