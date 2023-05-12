@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <!-- Version 1.0.0 -->
+    <!-- Version 1.0.1 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
       html {
@@ -162,7 +162,7 @@
       <section class="api-key">
         <label>
           <span>ChatGPT API Key</span>
-          <input type="password" placeholder="ChatGPT API Key..." />
+          <input type="password" placeholder="ChatGPT API Key..."  />
         </label>
       </section>
 
@@ -243,7 +243,10 @@
 
       const botApi = {
         async get(input) {
-          const apiKey = apiKeyInput.value
+          let apiKey = apiKeyInput.value
+          if (!apiKey) {
+            apiKey = apiKeyInput.value = prompt('Please enter your ChatGPT API key: ')
+          }
           return fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -287,6 +290,7 @@
           document.body.removeChild(el)
         },
         async nextPrompt() {
+          this.prompts.unshift({ waiting: true })
           const response = await botApi.get({
             model: 'gpt-3.5-turbo',
             temperature: 1,
@@ -329,7 +333,6 @@
             role: 'user',
             content: answer
           })
-          this.prompts.unshift({ waiting: true })
           setTimeout(() => scrollToBottom(), 0)
           this.nextPrompt()
         },
