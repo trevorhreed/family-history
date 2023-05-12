@@ -1,0 +1,9 @@
+{
+  "name": "family-history",
+  "version": "1.0.0",
+  "description": "A bot that interviews you about your family history",
+  "main": "index.js",
+  "scripts": {
+    "start": "npx live-server docs/"
+  }
+}

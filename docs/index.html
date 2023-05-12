@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <style>
+      html, body {
+        margin: 0;
+        height: 100%;
+      }
+
+      main {
+        height: 100%;
+        max-width: 800px;
+        margin: 0 auto;
+        overflow: auto;
+      }
+
+      .conversation .entry {
+        margin: 1em 0;
+        padding: 0.5em;
+        border-radius: 0.5em;
+        clear: both;
+      }
+      .conversation .sys {
+        color: #888;
+        font-style: italic;
+        border: dotted 1px #ccc;
+        text-align: center;
+      }
+      .conversation .bot {
+        float: left;
+        background: #eee;
+      }
+      .conversation .human {
+        float: right;
+        background: #ace;
+        text-align: right;
+      }
+
+      button {
+        border-radius: 0.2em;
+        border: solid 1px #aaa;
+        background: #eee;
+        padding: 0.5em;
+        margin: 0.5em;
+        cursor: pointer;
+      }
+      button:hover {
+        box-shadow: 0 0 5px #aaa;
+      }
+      button:active {
+        box-shadow: 0 0 2px #aaa;
+      }
+
+      .prompt .options {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 1em 0;
+      }
+
+      #input {
+        outline: none;
+        position: absolute;
+        max-width: 600px;
+        width: 100%;
+        bottom: 0;
+        box-shadow: 0 0 5px #aaa;
+        margin: 1em;
+        padding: 1em 2em;
+        border-radius: 3em;
+        font-size: 1.2em;
+        box-sizing: border-box;
+      }
+      #input:hover, #input:focus, #input:active {
+        border: solid 1px #888;
+      }
+    </style>
+  </head>
+  <body>
+    <main v-scope="state">
+
+      <section class="conversation">
+        <div v-for="entry in conversation"
+             class="entry"
+             :class="entry.user">
+          {{ entry.content }}
+        </div>
+        <div style='clear:both'></div>
+      </section>
+
+      <section class="prompt">
+        <p class="label">{{ prompts[0].label }}</p>
+        <div class="options">
+          <button v-for="option in prompts[0].options"
+                  class="option"
+                  @click="choose(option)">
+            {{ option }}
+          </button>
+        </div>
+        <button @click="cancel(prompts[0].label)" v-show="prompts[0].input">Go Back</button>
+        <button @click="skip()" v-show="prompts[0].options">Skip these questions</button>
+        <button @click="reset()" v-show="prompts[0].export">Reset Interview</button>
+      </section>
+
+
+      <p id="input" contenteditable="true" v-show="prompts[0].input" />
+
+    </main>
+
+    <script type="module">
+      import { createApp, reactive } from 'https://unpkg.com/petite-vue?module'
+
+      const initialPrompts = [{
+        label: 'Please choose from among the following prompts to get started:',
+        options: [
+          'What are the names of your parents, grandparents, and great-grandparents?',
+          'Where were they born and raised?',
+          'What were their occupations?',
+          'Do you have any family stories or traditions that you would like to share?'
+        ]
+      },{
+        label: 'Thank you for completing this interview!',
+        export: true
+      }];
+
+      const clone = o => JSON.parse(JSON.stringify(o))
+
+      const state = reactive({
+        conversation: [{
+          user: 'sys',
+          content: 'The start of the conversation'
+        },{
+          user: 'bot',
+          content: 'Are you there?'
+        },{
+          user: 'human',
+          content: 'Yes, I am.'
+        }],
+        prompts: clone(initialPrompts),
+        choose(option) {
+          this.prompts.unshift({ label: option, input: true })
+          const options = this.prompts[1].options
+          const index = options.indexOf(option)
+          options.splice(index, 1)
+        },
+        cancel(option) {
+          this.prompts[1].options.push(option)
+          this.prompts.shift()
+        },
+        skip() {
+          this.prompts.shift()
+        },
+        reset() {
+          this.prompts = clone(initialPrompts)
+        }
+      })
+
+      const getFollowUpPrompts = async (previousPrompt, previousAnswer) => {
+        /*
+
+          TODO:
+
+            refine question to get follow-up prompts
+
+        */
+
+        const botPrompt = `
+          Given the following information, please provide a follow-up question in JSON format that matches this json schema {"$schema":"https://json-schema.org/draft/2019-09/schema","type":"object","properties":{"questions":{"type":"array","items":{"type":"string"},"minItems":2,"maxItems":2,"uniqueItems":true}}}:
+
+          ${previousPrompt}
+
+          ${previousAnswer}
+        `
+      }
+
+      const getNarrativeSummary = async () => {
+        /*
+            TODO:
+
+              refine question to get narrative summary
+        */
+      }
+
+      const getJsonOutput = async () => {
+        /*
+            TODO:
+
+              refine question to get json output
+              create json schema
+        */
+      }
+
+      const choosePrompt = async (option) => {
+
+      }
+
+      createApp({
+        state,
+
+      }).mount()
+
+    </script>
+  </body>
+</html>
